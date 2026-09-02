@@ -5,7 +5,8 @@
 export type Category = { id: string; name: string; color: string; createdAt: string };
 export type Entry = { id: string; title: string; categoryId: string; categoryName: string; imageUrl: string; imageName: string; createdAt: string };
 
-export type StoredImage = { body: ReadableStream<Uint8Array> | Uint8Array };
+// body 统一为 Blob：Node 与 Edge 运行时都原生支持，且可直接作为 Response 的 BodyInit。
+export type StoredImage = { body: Blob };
 
 export interface StorageBackend {
   listJson<T>(collection: string): Promise<T[]>;

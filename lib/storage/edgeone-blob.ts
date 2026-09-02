@@ -85,9 +85,9 @@ export function createEdgeOneBlobStorage(options: {
     async getImage(key: string): Promise<StoredImage | null> {
       const s = await store();
       const body = (await s.get(imageKey(key), {
-        type: 'stream',
+        type: 'blob',
         ...STRONG,
-      })) as ReadableStream<Uint8Array> | null;
+      })) as Blob | null;
       return body ? { body } : null;
     },
 

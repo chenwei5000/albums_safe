@@ -22,6 +22,19 @@ function imagePath(key: string) {
   return path.join(dataRoot, 'images', safeKey);
 }
 
+const extensionMime: Record<string, string> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  webp: 'image/webp',
+  gif: 'image/gif',
+};
+
+function contentTypeFromKey(key: string): string {
+  const ext = key.split('.').pop()?.toLowerCase() ?? '';
+  return extensionMime[ext] ?? 'application/octet-stream';
+}
+
 async function readJsonFile<T>(file: string): Promise<T | null> {
   try {
     return JSON.parse(await readFile(file, 'utf8')) as T;
@@ -47,7 +60,11 @@ export function createLocalFileStorage(): StorageBackend {
           .filter((file) => file.endsWith('.json'))
           .map((file) => readJsonFile<T>(path.join(dir, file))),
       );
-      return values.filter((value): value is T => value !== null);
+      const result: T[] = [];
+      for (const value of values) {
+        if (value !== null) result.push(value);
+      }
+      return result;
     },
 
     async getJson<T>(collection: string, id: string) {
@@ -66,7 +83,7 @@ export function createLocalFileStorage(): StorageBackend {
     async getImage(key: string): Promise<StoredImage | null> {
       try {
         const buffer = await readFile(imagePath(key));
-        return { body: buffer };
+        return { body: new Blob([buffer], { type: contentTypeFromKey(key) }) };
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
         throw error;
