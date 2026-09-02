@@ -212,6 +212,7 @@ export default function GalleryPage() {
           </article>
         ) : list.length ? (
           /* ————— 缩略图瀑布流：方图/竖图按原始比例展示，不留黑边 ————— */
+          <>
           <div className="columns-2 gap-3 sm:columns-3 sm:gap-4 lg:columns-4">
             {pagedList.map((entry) => (
               <button key={entry.id} type="button" onClick={() => setSelectedId(entry.id)}
@@ -246,6 +247,7 @@ export default function GalleryPage() {
               </Pagination>
             </div>
           )}
+          </>
         ) : (
           <div className="grid min-h-80 place-items-center rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-8 text-center">
             <div>
