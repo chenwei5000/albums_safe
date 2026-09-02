@@ -48,7 +48,7 @@ export default function Home() {
         {loading ? <div className="columns-1 gap-5 sm:columns-2 lg:columns-3"><div className="mb-5 h-80 break-inside-avoid animate-pulse rounded-2xl bg-muted" /><div className="mb-5 h-64 break-inside-avoid animate-pulse rounded-2xl bg-muted" /><div className="mb-5 h-96 break-inside-avoid animate-pulse rounded-2xl bg-muted" /></div> : filtered.length ? (
           <div className="columns-1 gap-5 sm:columns-2 lg:columns-3">
             {filtered.map((entry, index) => (
-              <Link key={entry.id} href={`/albums/${entry.id}`} className="group mb-5 block break-inside-avoid overflow-hidden rounded-2xl border bg-card shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+              <Link key={entry.id} href={`/albums/${entry.id}`} prefetch={false} className="group mb-5 block break-inside-avoid overflow-hidden rounded-2xl border bg-card shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
                 <div className={`relative overflow-hidden bg-muted ${index % 5 === 0 ? 'aspect-[4/5]' : index % 3 === 0 ? 'aspect-square' : 'aspect-[4/3]'}`}>
                   <Image src={entry.imageUrl} alt={entry.title} fill unoptimized sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover transition duration-700 group-hover:scale-[1.04]" />
                   <span className="absolute right-3 top-3 grid size-9 translate-y-1 place-items-center rounded-full bg-black/35 text-white opacity-0 backdrop-blur transition group-hover:translate-y-0 group-hover:opacity-100"><ArrowUpRight className="size-4" /></span>
@@ -58,7 +58,7 @@ export default function Home() {
             ))}
           </div>
         ) : (
-          <div className="grid min-h-80 place-items-center rounded-3xl border border-dashed bg-card/50 p-8 text-center"><div><span className="mx-auto mb-4 grid size-12 place-items-center rounded-2xl bg-secondary text-secondary-foreground"><ImagePlus className="size-5" /></span><h2 className="font-heading text-xl font-semibold">{query || categoryId !== 'all' ? '当前筛选下没有影集' : '从第一张图片开始'}</h2><p className="mb-5 mt-2 text-sm text-muted-foreground">{query || categoryId !== 'all' ? '切换分类或换个关键词试试。' : '上传图片并添加标题，内容会出现在这里。'}</p>{!query && categoryId === 'all' && <Button render={<Link href="/upload" />}><ImagePlus />上传第一张图片</Button>}</div></div>
+          <div className="grid min-h-80 place-items-center rounded-3xl border border-dashed bg-card/50 p-8 text-center"><div><span className="mx-auto mb-4 grid size-12 place-items-center rounded-2xl bg-secondary text-secondary-foreground"><ImagePlus className="size-5" /></span><h2 className="font-heading text-xl font-semibold">{query || categoryId !== 'all' ? '当前筛选下没有影集' : '从第一张图片开始'}</h2><p className="mb-5 mt-2 text-sm text-muted-foreground">{query || categoryId !== 'all' ? '切换分类或换个关键词试试。' : '上传图片并添加标题，内容会出现在这里。'}</p>{!query && categoryId === 'all' && <Button render={<Link href="/upload" prefetch={false} />}><ImagePlus />上传第一张图片</Button>}</div></div>
         )}
       </section>
     </main>
