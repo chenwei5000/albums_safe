@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Images, Plus } from 'lucide-react';
+import { Images, Plus, Tags } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export function SiteHeader() {
@@ -11,8 +11,9 @@ export function SiteHeader() {
           <div><p className="font-heading text-base font-bold leading-none tracking-tight">Album Safe</p><p className="mt-1 text-[11px] text-muted-foreground">灵感影集</p></div>
         </Link>
         <nav className="flex items-center gap-1 sm:gap-2" aria-label="主要导航">
-          <Button variant="ghost" render={<Link href="/" prefetch={false} />}>影集</Button>
-          <Button render={<Link href="/upload" prefetch={false} />}><Plus />上传图片</Button>
+          <Button variant="ghost" render={<Link href="/gallery" prefetch={false} />}>画廊</Button>
+          <Button variant="ghost" render={<Link href="/categories" prefetch={false} />}><Tags /><span className="hidden sm:inline">分类管理</span></Button>
+          <Button render={<Link href="/upload" prefetch={false} />}><Plus /><span className="hidden sm:inline">上传图片</span></Button>
         </nav>
       </div>
     </header>

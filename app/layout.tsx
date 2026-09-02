@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { ParticleField } from '@/components/particle-field';
 import './globals.css';
 
 const geistSans = Geist({
@@ -23,11 +24,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" className="dark">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        {/* 全站暗色氛围背景（渐变底 + 粒子），内容层统一置于其上 */}
+        <ParticleField />
+        <div className="relative z-10">{children}</div>
       </body>
     </html>
   );

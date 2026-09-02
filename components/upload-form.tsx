@@ -4,12 +4,13 @@
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Check, FolderPlus, ImageUp, LoaderCircle, Plus, UploadCloud, X } from 'lucide-react';
+import { Check, ChevronDown, ImageUp, LoaderCircle, Plus, UploadCloud, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/rich-text-editor';
 import type { Category } from '@/lib/edge-storage';
 
 type UploadedImage = { url: string; name: string; key: string };
@@ -20,9 +21,13 @@ export function UploadForm() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [title, setTitle] = useState('');
+  const [productDesc, setProductDesc] = useState('');
+  const [productIntro, setProductIntro] = useState('');
+  const [otherNotes, setOtherNotes] = useState('');
+  const [tagsInput, setTagsInput] = useState('');
+  const [categoryName, setCategoryName] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [newCategory, setNewCategory] = useState('');
-  const [creatingCategory, setCreatingCategory] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [uploaded, setUploaded] = useState<UploadedImage | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -34,6 +39,7 @@ export function UploadForm() {
     const data = (await response.json()) as Category[];
     setCategories(data);
     setCategoryId((current) => current || data[0]?.id || '');
+    setCategoryName((current) => current || data[0]?.name || '');
   }, []);
   useEffect(() => { void loadCategories(); }, [loadCategories]);
 
@@ -53,22 +59,41 @@ export function UploadForm() {
     }
   };
 
-  const createCategory = async () => {
-    if (!newCategory.trim()) return;
-    setCreatingCategory(true); setError('');
-    const response = await fetch('/api/categories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newCategory.trim(), color: colors[categories.length % colors.length] }) });
-    const result = (await response.json()) as Category & { error?: string };
-    if (response.ok) { setCategories((current) => [...current, result]); setCategoryId(result.id); setNewCategory(''); } else setError(result.error ?? '分类创建失败');
-    setCreatingCategory(false);
-  };
+  // 组合框下拉状态：按输入过滤；输入名与已有分类不匹配时，提交阶段先创建分类
+  const categoryQuery = categoryName.trim().toLowerCase();
+  const filteredCategories = categories.filter((category) => category.name.toLowerCase().includes(categoryQuery));
+  const exactMatch = categories.some((category) => category.name.toLowerCase() === categoryQuery);
+  const willCreateCategory = categoryName.trim().length > 0 && !exactMatch;
+
+  const introFilled = productIntro.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim().length > 0;
 
   const submit = async () => {
-    if (!title.trim() || !categoryId || !uploaded) return;
+    const name = categoryName.trim();
+    if (!title.trim() || !name || !uploaded || !introFilled) return;
+    const tags = tagsInput.split(/[,，、]/).map((tag) => tag.trim()).filter(Boolean).slice(0, 12);
     setSubmitting(true); setError('');
-    const response = await fetch('/api/entries', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title.trim(), categoryId, imageUrl: uploaded.url, imageName: uploaded.name }) });
-    const result = (await response.json()) as { error?: string };
-    if (response.ok) { router.push('/'); router.refresh(); return; }
-    setError(result.error ?? '数据添加失败'); setSubmitting(false);
+    try {
+      let resolvedId = categoryId;
+      const selected = categories.find((category) => category.id === categoryId);
+      if (!selected || selected.name.toLowerCase() !== name.toLowerCase()) {
+        const existing = categories.find((category) => category.name.toLowerCase() === name.toLowerCase());
+        if (existing) {
+          resolvedId = existing.id;
+        } else {
+          const response = await fetch('/api/categories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, color: colors[categories.length % colors.length] }) });
+          const result = (await response.json()) as Category & { error?: string };
+          if (!response.ok) { setError(result.error ?? '分类创建失败'); setSubmitting(false); return; }
+          resolvedId = result.id;
+        }
+      }
+      const response = await fetch('/api/entries', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title.trim(), productDesc, productIntro, otherNotes: otherNotes.trim(), tags, categoryId: resolvedId, imageUrl: uploaded.url, imageName: uploaded.name }) });
+      const result = (await response.json()) as { error?: string };
+      if (response.ok) { router.push('/gallery'); router.refresh(); return; }
+      setError(result.error ?? '数据添加失败');
+    } catch {
+      setError('网络异常，请稍后重试');
+    }
+    setSubmitting(false);
   };
 
   return (
@@ -86,14 +111,40 @@ export function UploadForm() {
       </section>
 
       <section className="h-fit rounded-3xl border bg-card p-5 shadow-sm sm:p-7 lg:sticky lg:top-24">
-        <div className="mb-7"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Image details</p><h2 className="mt-2 font-heading text-2xl font-bold tracking-tight">完善影集信息</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">填写标题、选择分类，确认图片后即可添加。</p></div>
+        <div className="mb-7"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Image details</p><h2 className="mt-2 font-heading text-2xl font-bold tracking-tight">完善影集信息</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">填写标题、选择或输入分类，确认图片后即可添加。</p></div>
         <div className="space-y-6">
-          <div className="space-y-2"><Label htmlFor="title">标题 <span className="text-destructive">*</span></Label><Input id="title" className="h-11" maxLength={80} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="为这张图片起个标题" /><p className="text-right text-xs text-muted-foreground">{title.length}/80</p></div>
-          <div className="space-y-2"><Label htmlFor="category">分类 <span className="text-destructive">*</span></Label><NativeSelect id="category" className="w-full" value={categoryId} onChange={(event) => setCategoryId(event.target.value)}><NativeSelectOption value="">请选择分类</NativeSelectOption>{categories.map((category) => <NativeSelectOption key={category.id} value={category.id}>{category.name}</NativeSelectOption>)}</NativeSelect></div>
-          <div className="rounded-2xl border bg-muted/35 p-4"><div className="mb-3 flex items-center gap-2 text-sm font-medium"><FolderPlus className="size-4 text-primary" />自定义创建分类</div><div className="flex gap-2"><Input value={newCategory} maxLength={30} onChange={(event) => setNewCategory(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void createCategory(); } }} placeholder="输入新分类名称" /><Button variant="secondary" onClick={() => void createCategory()} disabled={!newCategory.trim() || creatingCategory}>{creatingCategory ? <LoaderCircle className="animate-spin" /> : <Plus />}创建</Button></div></div>
+          <div className="space-y-2"><Label htmlFor="title">主标题 <span className="text-destructive">*</span></Label><Input id="title" className="h-11" maxLength={80} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="为作品起个标题" /><p className="text-right text-xs text-muted-foreground">{title.length}/80</p></div>
+          <div className="space-y-2">
+            <Label htmlFor="category">分类 <span className="text-destructive">*</span></Label>
+            <div className="relative">
+              <Input id="category" className="h-11 pr-9" autoComplete="off" maxLength={30} value={categoryName} placeholder="选择或输入新分类" onChange={(event) => { setCategoryName(event.target.value); setCategoryId(''); setPickerOpen(true); }} onFocus={() => setPickerOpen(true)} onBlur={() => setTimeout(() => setPickerOpen(false), 120)} onKeyDown={(event) => { if (event.key === 'Enter') event.preventDefault(); if (event.key === 'Escape') setPickerOpen(false); }} />
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              {pickerOpen && (filteredCategories.length > 0 || willCreateCategory) && (
+                <div className="absolute z-30 mt-1.5 max-h-60 w-full overflow-y-auto rounded-xl border bg-popover p-1 text-popover-foreground shadow-lg" onMouseDown={(event) => event.preventDefault()}>
+                  {filteredCategories.map((category) => (
+                    <button key={category.id} type="button" onClick={() => { setCategoryId(category.id); setCategoryName(category.name); setPickerOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-accent hover:text-accent-foreground">
+                      <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: category.color }} />
+                      <span className="truncate">{category.name}</span>
+                      {category.id === categoryId && <Check className="ml-auto size-4 shrink-0 text-primary" />}
+                    </button>
+                  ))}
+                  {willCreateCategory && (
+                    <button type="button" onClick={() => { setCategoryId(''); setPickerOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-primary transition hover:bg-accent">
+                      <Plus className="size-4 shrink-0" /><span className="truncate">创建新分类「{categoryName.trim()}」</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">{willCreateCategory ? <>添加时将自动创建新分类「{categoryName.trim()}」</> : '可直接选择已有分类，或输入名称创建新分类'}</p>
+          </div>
+          <div className="space-y-2"><Label>产品说明</Label><RichTextEditor value={productDesc} onChange={setProductDesc} placeholder="简要说明产品（选填，支持排版与插图）" /></div>
+          <div className="space-y-2"><Label>产品介绍 <span className="text-destructive">*</span></Label><RichTextEditor value={productIntro} onChange={setProductIntro} placeholder="详细介绍产品，支持排版与插图（必填）" />{!introFilled && <p className="text-xs text-destructive">产品介绍为必填项</p>}</div>
+          <div className="space-y-2"><Label htmlFor="notes">其他说明</Label><Textarea id="notes" className="min-h-20" maxLength={500} value={otherNotes} onChange={(event) => setOtherNotes(event.target.value)} placeholder="其他需要补充的说明（选填）" /></div>
+          <div className="space-y-2"><Label htmlFor="tags">品牌标签</Label><Input id="tags" className="h-11" value={tagsInput} onChange={(event) => setTagsInput(event.target.value)} placeholder="多个标签用逗号分隔，如：高端, 限量" /></div>
           {error && <p role="alert" className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p>}
-          <Button size="lg" className="h-12 w-full text-base" onClick={() => void submit()} disabled={!title.trim() || !categoryId || !uploaded || uploading || submitting}>{submitting ? <LoaderCircle className="animate-spin" /> : <ImageUp />}{submitting ? '正在添加…' : '添加到影集'}</Button>
-          <p className="text-center text-xs text-muted-foreground">添加成功后将自动返回首页列表</p>
+          <Button size="lg" className="h-12 w-full text-base" onClick={() => void submit()} disabled={!title.trim() || !categoryName.trim() || !introFilled || !uploaded || uploading || submitting}>{submitting ? <LoaderCircle className="animate-spin" /> : <ImageUp />}{submitting ? '正在添加…' : '添加到影集'}</Button>
+          <p className="text-center text-xs text-muted-foreground">添加成功后将自动返回画廊</p>
         </div>
       </section>
     </div>

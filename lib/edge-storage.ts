@@ -3,8 +3,8 @@
 // Functions（Edge/Cloud）内仅凭 Store 名称自动鉴权，无需凭证。
 // 本地脚本/外部服务可用 EDGEOINE_PROJECT_ID + EDGEOINE_BLOB_TOKEN 显式带凭证访问 Blob。
 
-export type Category = { id: string; name: string; color: string; createdAt: string };
-export type Entry = { id: string; title: string; categoryId: string; categoryName: string; imageUrl: string; imageName: string; createdAt: string };
+export type Category = { id: string; name: string; color: string; panelColor: string; accentColor: string; createdAt: string };
+export type Entry = { id: string; title: string; subtitle: string; productDesc: string; productIntro: string; otherNotes: string; tags: string[]; categoryId: string; categoryName: string; imageUrl: string; imageName: string; createdAt: string };
 
 // body 统一为 Blob：Node 与 Edge 运行时都原生支持，且可直接作为 Response 的 BodyInit。
 export type StoredImage = { body: Blob };
@@ -33,10 +33,19 @@ async function createBackend(): Promise<StorageBackend> {
   const { createEdgeOneBlobStorage } = await import('./storage/edgeone-blob');
   // 显式配置凭证（本地脚本/外部服务）时带凭证访问；
   // 线上 EdgeOne Functions（production）不传凭证，由运行时按 Store 名称自动鉴权。
+  // 显式配置凭证（本地脚本/外部服务/Node 生产部署）时带凭证访问 Blob。
   if (projectId && token) return createEdgeOneBlobStorage({ projectId, token });
-  if (process.env.NODE_ENV === 'production') return createEdgeOneBlobStorage();
-  const { createLocalFileStorage } = await import('./storage/local-fs');
-  return createLocalFileStorage();
+  // 以运行时能力而非 NODE_ENV 判别：Node 运行时（next dev / next start / Node 容器）
+  // 能加载 node:fs，使用文件系统后端（.data 目录）；Edge Runtime（EdgeOne Pages
+  // Functions / miniflare）没有 node:fs，import 会抛错，此时回退 Blob 后端，
+  // 由 Functions 运行时按 Store 名称自动鉴权。
+  try {
+    const { createLocalFileStorage } = await import('./storage/local-fs');
+    return createLocalFileStorage();
+  } catch (error) {
+    console.warn('[storage] 当前运行时不支持文件系统后端，回退到 Blob 存储：', error);
+    return createEdgeOneBlobStorage();
+  }
 }
 
 export async function listJson<T>(collection: string): Promise<T[]> {
