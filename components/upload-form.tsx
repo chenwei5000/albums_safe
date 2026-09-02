@@ -1,7 +1,6 @@
 'use client';
 /* oxlint-disable react/react-compiler -- API hydration updates client form state after mount */
 
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, ImageUp, LoaderCircle, Plus, UploadCloud, X } from 'lucide-react';
@@ -11,7 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RichTextEditor } from '@/components/rich-text-editor';
-import type { Category, Entry } from '@/lib/edge-storage';
+import { SmartImage } from '@/components/smart-image';
+import { normalizeEntryTags, type Category, type Entry, type EntryTag } from '@/lib/edge-storage';
 
 type UploadedImage = { url: string; name: string; key: string };
 const colors = ['#4f46e5', '#0891b2', '#059669', '#d97706', '#db2777'];
@@ -46,12 +46,13 @@ export function UploadForm({ initialEntry }: { initialEntry?: Entry } = {}) {
   const [productDesc, setProductDesc] = useState(initialEntry?.productDesc ?? '');
   const [productIntro, setProductIntro] = useState(initialEntry?.productIntro ?? '');
   const [otherNotes, setOtherNotes] = useState(initialEntry?.otherNotes ?? '');
-  const [tagsInput, setTagsInput] = useState((initialEntry?.tags ?? []).join(', '));
+  const [tags, setTags] = useState<EntryTag[]>(() => normalizeEntryTags(initialEntry?.tags, initialEntry?.tagsColor || '#f3d98b'));
+  const [tagInput, setTagInput] = useState('');
   const [titleColor, setTitleColor] = useState(initialEntry?.titleColor || '#d4af37');
   const [productDescColor, setProductDescColor] = useState(initialEntry?.productDescColor || '#ffffff');
   const [productIntroColor, setProductIntroColor] = useState(initialEntry?.productIntroColor || '#ffffff');
   const [otherNotesColor, setOtherNotesColor] = useState(initialEntry?.otherNotesColor || '#ffffff');
-  const [tagsColor, setTagsColor] = useState(initialEntry?.tagsColor || '#ffffff');
+  const [tagsColor] = useState(initialEntry?.tagsColor || '#ffffff');
   const [categoryName, setCategoryName] = useState(initialEntry?.categoryName ?? '');
   const [categoryId, setCategoryId] = useState(initialEntry?.categoryId ?? '');
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -96,10 +97,27 @@ export function UploadForm({ initialEntry }: { initialEntry?: Entry } = {}) {
 
   const introFilled = productIntro.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim().length > 0;
 
+  // 标签：回车或点击添加（支持逗号批量），每个标签独立颜色，新增时按预设循环自动配色
+  const addTags = () => {
+    const names = tagInput.split(/[,，、]/).map((name) => name.trim()).filter(Boolean);
+    if (!names.length) return;
+    setTags((current) => {
+      const next = [...current];
+      for (const name of names) {
+        if (next.length >= 12) break;
+        if (next.some((tag) => tag.name === name)) continue;
+        next.push({ name, color: TEXT_COLOR_PRESETS[next.length % TEXT_COLOR_PRESETS.length] });
+      }
+      return next;
+    });
+    setTagInput('');
+  };
+  const changeTagColor = (index: number, color: string) => setTags((current) => current.map((tag, i) => (i === index ? { ...tag, color } : tag)));
+  const removeTag = (index: number) => setTags((current) => current.filter((_, i) => i !== index));
+
   const submit = async () => {
     const name = categoryName.trim();
     if (!title.trim() || !name || !uploaded || !introFilled) return;
-    const tags = tagsInput.split(/[,，、]/).map((tag) => tag.trim()).filter(Boolean).slice(0, 12);
     setSubmitting(true); setError('');
     try {
       let resolvedId = categoryId;
@@ -133,7 +151,7 @@ export function UploadForm({ initialEntry }: { initialEntry?: Entry } = {}) {
       <section>
         <Label htmlFor="image-file" className="mb-3 block text-sm font-semibold">图片 <span className="text-destructive">*</span></Label>
         {uploaded ? (
-          <div className="relative min-h-[420px] overflow-hidden rounded-3xl border bg-muted shadow-sm sm:min-h-[560px]"><Image src={uploaded.url} alt="已上传图片预览" fill unoptimized sizes="(max-width: 1024px) 100vw, 55vw" className="object-contain" /><div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 bg-gradient-to-t from-black/70 to-transparent p-5 pt-16 text-white"><div className="min-w-0"><p className="flex items-center gap-2 text-sm font-medium"><Check className="size-4 text-emerald-300" />{isEdit ? '当前图片' : '上传完成'}</p><p className="mt-1 truncate text-xs text-white/70">{uploaded.name}</p></div><Button variant="outline" size="sm" className="border-white/20 bg-black/20 text-white hover:bg-black/40" onClick={() => { setUploaded(null); if (inputRef.current) inputRef.current.value = ''; }}><X />{isEdit ? '更换图片' : '重新选择'}</Button></div></div>
+          <div className="relative overflow-hidden rounded-3xl border bg-muted shadow-sm"><SmartImage src={uploaded.url} alt="已上传图片预览" sizes="(max-width: 1024px) 100vw, 55vw" className="min-h-[420px] sm:min-h-[560px]" imgClassName="object-contain" /><div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 bg-gradient-to-t from-black/70 to-transparent p-5 pt-16 text-white"><div className="min-w-0"><p className="flex items-center gap-2 text-sm font-medium"><Check className="size-4 text-emerald-300" />{isEdit ? '当前图片' : '上传完成'}</p><p className="mt-1 truncate text-xs text-white/70">{uploaded.name}</p></div><Button variant="outline" size="sm" className="border-white/20 bg-black/20 text-white hover:bg-black/40" onClick={() => { setUploaded(null); if (inputRef.current) inputRef.current.value = ''; }}><X />{isEdit ? '更换图片' : '重新选择'}</Button></div></div>
         ) : (
           <label htmlFor="image-file" className="group flex min-h-[420px] cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-primary/30 bg-card p-8 text-center shadow-sm transition hover:border-primary/60 hover:bg-primary/[0.025] sm:min-h-[560px]">
             <span className="mb-5 grid size-16 place-items-center rounded-2xl bg-secondary text-secondary-foreground transition group-hover:scale-105"><UploadCloud className="size-7" /></span><h2 className="font-heading text-xl font-semibold">{uploading ? '图片上传中…' : '点击选择图片'}</h2><p className="mt-2 text-sm text-muted-foreground">选择后将自动上传到 Blob</p><Badge variant="outline" className="mt-5">PNG、JPG、WebP、GIF · 最大 8MB</Badge>{uploading && <LoaderCircle className="mt-5 size-5 animate-spin text-primary" />}
@@ -173,7 +191,27 @@ export function UploadForm({ initialEntry }: { initialEntry?: Entry } = {}) {
           <div className="space-y-2"><div className="flex flex-wrap items-center justify-between gap-2"><Label>产品说明</Label><TextColorPicker value={productDescColor} onChange={setProductDescColor} /></div><RichTextEditor value={productDesc} onChange={setProductDesc} placeholder="简要说明产品（选填，支持排版与插图）" /></div>
           <div className="space-y-2"><div className="flex flex-wrap items-center justify-between gap-2"><Label>产品介绍 <span className="text-destructive">*</span></Label><TextColorPicker value={productIntroColor} onChange={setProductIntroColor} /></div><RichTextEditor value={productIntro} onChange={setProductIntro} placeholder="详细介绍产品，支持排版与插图（必填）" />{!introFilled && <p className="text-xs text-destructive">产品介绍为必填项</p>}</div>
           <div className="space-y-2"><div className="flex flex-wrap items-center justify-between gap-2"><Label htmlFor="notes">其他说明</Label><TextColorPicker value={otherNotesColor} onChange={setOtherNotesColor} /></div><Textarea id="notes" className="min-h-20" maxLength={500} value={otherNotes} onChange={(event) => setOtherNotes(event.target.value)} placeholder="其他需要补充的说明（选填）" /></div>
-          <div className="space-y-2"><div className="flex flex-wrap items-center justify-between gap-2"><Label htmlFor="tags">品牌标签</Label><TextColorPicker value={tagsColor} onChange={setTagsColor} /></div><Input id="tags" className="h-11" value={tagsInput} onChange={(event) => setTagsInput(event.target.value)} placeholder="多个标签用逗号分隔，如：高端, 限量" /></div>
+          <div className="space-y-2">
+            <Label>品牌标签</Label>
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {tags.map((tag, index) => (
+                  <span key={tag.name} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted py-1 pl-1.5 pr-1 text-xs text-foreground">
+                    <label className="relative grid size-4 shrink-0 cursor-pointer place-items-center rounded-full border border-black/10" style={{ backgroundColor: tag.color }} title="点击修改标签颜色">
+                      <input type="color" value={tag.color} onChange={(event) => changeTagColor(index, event.target.value)} className="absolute inset-0 size-full cursor-pointer opacity-0" />
+                    </label>
+                    {tag.name}
+                    <button type="button" aria-label={`删除标签 ${tag.name}`} onClick={() => removeTag(index)} className="grid size-4 place-items-center rounded-full text-muted-foreground transition hover:bg-accent hover:text-accent-foreground"><X className="size-3" /></button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Input id="tags" className="h-11" maxLength={30} value={tagInput} onChange={(event) => setTagInput(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addTags(); } }} placeholder="输入标签后回车添加，如：高端、限量" />
+              <Button type="button" variant="outline" className="shrink-0" disabled={tags.length >= 12} onClick={addTags}><Plus />添加</Button>
+            </div>
+            <p className="text-xs text-muted-foreground">最多 12 个标签；点击标签上的色点可为该标签自定义颜色</p>
+          </div>
           {error && <p role="alert" className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p>}
           <Button size="lg" className="h-12 w-full text-base" onClick={() => void submit()} disabled={!title.trim() || !categoryName.trim() || !introFilled || !uploaded || uploading || submitting}>{submitting ? <LoaderCircle className="animate-spin" /> : <ImageUp />}{submitting ? (isEdit ? '正在保存…' : '正在添加…') : isEdit ? '保存修改' : '添加到影集'}</Button>
           <p className="text-center text-xs text-muted-foreground">{isEdit ? '保存成功后自动返回画廊' : '添加成功后将自动返回画廊'}</p>

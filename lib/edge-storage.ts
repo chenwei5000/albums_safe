@@ -4,8 +4,32 @@
 // 本地脚本/外部服务可用 EDGEOINE_PROJECT_ID + EDGEOINE_BLOB_TOKEN 显式带凭证访问 Blob。
 
 export type Category = { id: string; name: string; color: string; panelColor: string; accentColor: string; createdAt: string };
+// 标签支持自定义样式：每个标签携带自己的展示颜色
+export type EntryTag = { name: string; color: string };
 // 五处文案各自携带展示颜色：titleColor/productDescColor/productIntroColor/otherNotesColor/tagsColor
-export type Entry = { id: string; title: string; titleColor: string; subtitle: string; productDesc: string; productDescColor: string; productIntro: string; productIntroColor: string; otherNotes: string; otherNotesColor: string; tags: string[]; tagsColor: string; categoryId: string; categoryName: string; imageUrl: string; imageName: string; createdAt: string };
+export type Entry = { id: string; title: string; titleColor: string; subtitle: string; productDesc: string; productDescColor: string; productIntro: string; productIntroColor: string; otherNotes: string; otherNotesColor: string; tags: EntryTag[]; tagsColor: string; categoryId: string; categoryName: string; imageUrl: string; imageName: string; createdAt: string };
+
+// 旧数据 tags 为 string[]，统一规范化为 { name, color }[]；颜色非法或缺失时回退 fallbackColor
+export function normalizeEntryTags(tags: unknown, fallbackColor = '#ffffff'): EntryTag[] {
+  if (!Array.isArray(tags)) return [];
+  return tags
+    .slice(0, 12)
+    .map((item): EntryTag | null => {
+      if (typeof item === 'string') {
+        const name = item.trim().slice(0, 30);
+        return name ? { name, color: fallbackColor } : null;
+      }
+      if (item && typeof item === 'object') {
+        const name = String((item as { name?: unknown }).name ?? '').trim().slice(0, 30);
+        if (!name) return null;
+        const rawColor = (item as { color?: unknown }).color;
+        const color = typeof rawColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(rawColor.trim()) ? rawColor.trim() : fallbackColor;
+        return { name, color };
+      }
+      return null;
+    })
+    .filter((tag): tag is EntryTag => tag !== null);
+}
 
 // body 统一为 Blob：Node 与 Edge 运行时都原生支持，且可直接作为 Response 的 BodyInit。
 export type StoredImage = { body: Blob };
