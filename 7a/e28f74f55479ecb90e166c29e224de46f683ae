@@ -1,0 +1,22 @@
+app/page.tsx
+  h_05021ea194c5a2 51,61
+app/albums/[id]/page.tsx
+  h_05021ea194c5a2 26
+app/upload/page.tsx
+  h_05021ea194c5a2 9
+app/api/upload/route.ts
+  h_05021ea194c5a2 17-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "7ae28f74f55479ecb90e166c29e224de46f683ae",
+  "prompts": {},
+  "humans": {
+    "h_05021ea194c5a2": {
+      "author": "chenwei <chenwei.fazs@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
