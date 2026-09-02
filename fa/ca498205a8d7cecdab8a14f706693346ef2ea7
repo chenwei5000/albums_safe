@@ -1,0 +1,46 @@
+app/api/categories/route.ts
+  h_05021ea194c5a2 11,16-17
+app/globals.css
+  h_05021ea194c5a2 135-193
+components/upload-form.tsx
+  h_05021ea194c5a2 7,12-13,24-28,30,42,62-66,68,71-73,75-89,91-95,114,116-139,141-144,146-147
+app/api/entries/route.ts
+  h_05021ea194c5a2 11,13-19,23
+app/api/categories/[id]/route.ts
+  h_05021ea194c5a2 1-54
+components/rich-text-editor-inner.tsx
+  h_05021ea194c5a2 1-75
+components/rich-text-editor.tsx
+  h_05021ea194c5a2 1-16
+app/page.tsx
+  h_05021ea194c5a2 2,6,8,10,12-17
+app/albums/[id]/page.tsx
+  h_05021ea194c5a2 26
+components/site-header.tsx
+  h_05021ea194c5a2 2,14-16
+app/categories/page.tsx
+  h_05021ea194c5a2 1-23
+components/category-manager.tsx
+  h_05021ea194c5a2 1-171
+components/particle-field.tsx
+  h_05021ea194c5a2 1-91
+lib/edge-storage.ts
+  h_05021ea194c5a2 6-7,36,38-42,44-48
+app/layout.tsx
+  h_05021ea194c5a2 3,27,31-33
+app/gallery/page.tsx
+  h_05021ea194c5a2 1-156
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "faca498205a8d7cecdab8a14f706693346ef2ea7",
+  "prompts": {},
+  "humans": {
+    "h_05021ea194c5a2": {
+      "author": "chenwei <chenwei.fazs@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
