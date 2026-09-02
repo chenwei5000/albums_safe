@@ -90,17 +90,10 @@ export function createLocalFileStorage(): StorageBackend {
       }
     },
 
-    async putImage(key: string, body: ReadableStream<Uint8Array>, _contentType: string) {
+    async putImage(key: string, body: Blob) {
       const file = imagePath(key);
       await mkdir(path.dirname(file), { recursive: true });
-      const reader = body.getReader();
-      const chunks: Uint8Array[] = [];
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (value) chunks.push(value);
-      }
-      await writeFile(file, Buffer.concat(chunks));
+      await writeFile(file, Buffer.from(await body.arrayBuffer()));
     },
 
     async deleteImage(key: string) {

@@ -6,7 +6,7 @@ import type { StorageBackend, StoredImage } from '../edge-storage';
 // 读取统一使用 strong 一致性，保证上传/删除后首页与详情页立刻读到最新数据。
 // Functions（Edge/Cloud）内仅凭 Store 名称自动鉴权，无需 projectId/token。
 
-type BlobValue = string | ArrayBuffer | Blob | ReadableStream<Uint8Array>;
+type BlobValue = string | ArrayBuffer | Blob;
 type Consistency = 'eventual' | 'strong';
 
 interface BlobStore {
@@ -96,8 +96,9 @@ export function createEdgeOneBlobStorage(options?: {
       return body ? { body } : null;
     },
 
-    async putImage(key: string, body: ReadableStream<Uint8Array>): Promise<void> {
+    async putImage(key: string, body: Blob): Promise<void> {
       const s = await store();
+      // Blob 作为 PUT body 可携带 Content-Length，兼容云函数网关；勿传 ReadableStream
       await s.set(imageKey(key), body);
     },
 

@@ -40,11 +40,17 @@ export function UploadForm() {
   const uploadFile = async (file: File | undefined) => {
     if (!file) return;
     setUploading(true); setError(''); setUploaded(null);
-    const formData = new FormData(); formData.append('file', file);
-    const response = await fetch('/api/upload', { method: 'POST', body: formData });
-    const result = (await response.json()) as UploadedImage & { error?: string };
-    if (response.ok) setUploaded(result); else setError(result.error ?? '图片上传失败');
-    setUploading(false);
+    try {
+      const formData = new FormData(); formData.append('file', file);
+      const response = await fetch('/api/upload', { method: 'POST', body: formData });
+      const result = (await response.json().catch(() => null)) as (UploadedImage & { error?: string }) | null;
+      if (response.ok && result) setUploaded(result);
+      else setError(result?.error ?? '图片上传失败，请稍后重试');
+    } catch {
+      setError('图片上传失败，请检查网络后重试');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const createCategory = async () => {

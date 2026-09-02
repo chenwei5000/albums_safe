@@ -15,7 +15,8 @@ export interface StorageBackend {
   putJson<T>(collection: string, id: string, value: T): Promise<void>;
   deleteJson(collection: string, id: string): Promise<void>;
   getImage(key: string): Promise<StoredImage | null>;
-  putImage(key: string, body: ReadableStream<Uint8Array>, contentType: string): Promise<void>;
+  // body 统一为 Blob：调用方先缓冲文件内容，避免云函数 fetch 不支持流式请求体
+  putImage(key: string, body: Blob): Promise<void>;
   deleteImage(key: string): Promise<void>;
 }
 
@@ -58,8 +59,8 @@ export async function getImage(key: string): Promise<StoredImage | null> {
   return (await storage()).getImage(key);
 }
 
-export async function putImage(key: string, body: ReadableStream<Uint8Array>, contentType: string): Promise<void> {
-  await (await storage()).putImage(key, body, contentType);
+export async function putImage(key: string, body: Blob): Promise<void> {
+  await (await storage()).putImage(key, body);
 }
 
 export async function deleteImage(key: string): Promise<void> {
