@@ -34,15 +34,17 @@ export default function GalleryPage() {
       const categoryData = categoryResponse.ok ? ((await categoryResponse.json()) as Category[]) : [];
       setEntries(entryData);
       setCategories(categoryData);
-      setActiveId((current) => current || categoryData[0]?.id || '');
+      // activeId 为 '' 表示“全部分类”；若原选中分类已被删除则回退到全部
+      setActiveId((current) => (current && categoryData.some((category) => category.id === current) ? current : ''));
     } finally { setLoading(false); }
   }, []);
   useEffect(() => { void refresh(); }, [refresh]);
 
-  const activeCategory = categories.find((category) => category.id === activeId) ?? null;
-  const list = useMemo(() => entries.filter((entry) => entry.categoryId === activeId), [entries, activeId]);
+  // activeId 为 '' 时表示“全部分类”，右侧展示全部作品
+  const list = useMemo(() => (activeId ? entries.filter((entry) => entry.categoryId === activeId) : entries), [entries, activeId]);
   const selected = list.find((entry) => entry.id === selectedId) ?? null;
   const selectedIndex = selected ? list.findIndex((entry) => entry.id === selected.id) : -1;
+  const selectedCategory = selected ? (categories.find((category) => category.id === selected.categoryId) ?? null) : null;
 
   const selectCategory = (id: string) => { setActiveId(id); setSelectedId(null); };
   const goPrev = () => { if (selectedIndex > 0) setSelectedId(list[selectedIndex - 1].id); };
@@ -69,34 +71,42 @@ export default function GalleryPage() {
     }
   };
 
-  const panel = activeCategory?.panelColor || '#1b1d2e';
-  const accent = activeCategory?.accentColor || '#c9a24a';
+  const panel = selectedCategory?.panelColor || '#1b1d2e';
+  const accent = selectedCategory?.accentColor || '#c9a24a';
 
   return (
     <main className="relative min-h-screen bg-transparent text-foreground">
       <SiteHeader />
       <section className="relative z-10 mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
-        {/* 分类 Tab：纯白文字、新宋体、不加粗；选中时文字显示当前分类主题色 */}
-        <div className="mb-9 -mx-4 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-          <div className="flex w-max items-center gap-x-9 gap-y-3 sm:gap-x-14">
-            {categories.map((category) => {
-              const active = category.id === activeId;
-              return (
-                <button key={category.id} type="button" onClick={() => selectCategory(category.id)}
-                  className="text-base font-normal tracking-wide transition hover:opacity-75 sm:text-lg"
-                  style={{ color: active ? (category.accentColor || accent) : '#ffffff', fontFamily: '"NSimSun","SimSun","新宋体",serif' }}>
-                  {category.name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        {/* 左右布局：左侧分类菜单（首项为“全部分类”，其下为细分分类），右侧为缩略图内容区 */}
+        <div className="flex gap-4 sm:gap-8">
+          <aside className="w-24 shrink-0 sm:w-36 lg:w-40">
+            <nav className="sticky top-24 flex flex-col gap-0.5 sm:gap-1">
+              <button type="button" onClick={() => selectCategory('')}
+                className="block w-full truncate py-1.5 text-left text-sm font-normal tracking-wide transition hover:opacity-75 sm:text-base"
+                style={{ color: activeId === '' ? '#c9a24a' : '#ffffff', fontFamily: '"NSimSun","SimSun","新宋体",serif' }}>
+                全部分类
+              </button>
+              {categories.map((category) => {
+                const active = category.id === activeId;
+                return (
+                  <button key={category.id} type="button" onClick={() => selectCategory(category.id)}
+                    className="block w-full truncate py-1.5 text-left text-sm font-normal tracking-wide transition hover:opacity-75 sm:text-base"
+                    style={{ color: active ? (category.accentColor || '#c9a24a') : '#ffffff', fontFamily: '"NSimSun","SimSun","新宋体",serif' }}>
+                    {category.name}
+                  </button>
+                );
+              })}
+            </nav>
+          </aside>
+
+          <div className="min-w-0 flex-1">
 
         {loading ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
             {[0, 1, 2, 3, 4, 5].map((item) => <div key={item} className="aspect-[4/3] animate-pulse rounded-md bg-muted" />)}
           </div>
-        ) : selected && activeCategory ? (
+        ) : selected && selectedCategory ? (
           /* ————— 原地大卡片 ————— */
           <article className="relative overflow-hidden rounded-xl border border-white/10 shadow-2xl" style={{ backgroundColor: panel }}>
             <div className="h-1 w-full" style={{ backgroundColor: accent }} />
@@ -117,7 +127,7 @@ export default function GalleryPage() {
               <nav className="mb-6 flex flex-wrap items-center gap-2 pr-12 text-xs text-white/55">
                 <button type="button" onClick={() => setSelectedId(null)} className="transition hover:text-white">画廊</button>
                 <span>/</span>
-                <button type="button" onClick={() => setSelectedId(null)} className="transition hover:text-white">{activeCategory.name}</button>
+                <button type="button" onClick={() => setSelectedId(null)} className="transition hover:text-white">{selectedCategory.name}</button>
                 <span>/</span>
                 <span className="max-w-[40vw] truncate text-white/90">{selected.title}</span>
               </nav>
@@ -125,24 +135,24 @@ export default function GalleryPage() {
               <div className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
                 {/* 左侧图片，点击大图预览 */}
                 <button type="button" onClick={() => setPreview(true)} className="group relative block aspect-[4/3] w-full cursor-zoom-in overflow-hidden rounded-lg border border-white/10 bg-black/30 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/60">
-                  <Image src={selected.imageUrl} alt={selected.title} fill unoptimized priority sizes="(max-width: 1024px) 100vw, 55vw" className="object-cover transition duration-500 group-hover:scale-[1.03]" />
+                  <Image src={selected.imageUrl} alt={selected.title} fill unoptimized priority sizes="(max-width: 1024px) 100vw, 55vw" className="object-contain" />
                 </button>
 
                 {/* 右侧信息 */}
                 <div className="text-white">
-                  <h2 className="text-gold text-2xl font-normal leading-tight sm:text-3xl" style={{ fontFamily: '"NSimSun","SimSun","新宋体",serif' }}>{selected.title}</h2>
+                  <h2 className="text-2xl font-normal leading-tight sm:text-3xl" style={{ color: selected.titleColor || '#d4af37', fontFamily: '"NSimSun","SimSun","新宋体",serif' }}>{selected.title}</h2>
                   <div className="mt-3 flex items-center gap-2" aria-hidden>
                     <span className="h-0.5 w-10 rounded-full" style={{ backgroundColor: accent }} />
                     <span className="size-1.5 rotate-45" style={{ backgroundColor: accent }} />
                     <span className="h-px flex-1" style={{ background: `linear-gradient(to right, ${accent}66, transparent)` }} />
                   </div>
-                  {hasContent(selected.productDesc) && <div className="rich-text mt-4 text-[0.95rem] leading-7 text-white/85" dangerouslySetInnerHTML={{ __html: selected.productDesc }} />}
-                  {hasContent(selected.productIntro) && <div className="rich-text mt-3 text-[0.95rem] leading-7 text-white/80" dangerouslySetInnerHTML={{ __html: selected.productIntro }} />}
+                  {hasContent(selected.productDesc) && <div className="rich-text rich-text-colored mt-4 text-[0.95rem] leading-7" style={{ color: selected.productDescColor || '#ffffff' }} dangerouslySetInnerHTML={{ __html: selected.productDesc }} />}
+                  {hasContent(selected.productIntro) && <div className="rich-text rich-text-colored mt-3 text-[0.95rem] leading-7" style={{ color: selected.productIntroColor || '#ffffff' }} dangerouslySetInnerHTML={{ __html: selected.productIntro }} />}
                   {(selected.otherNotes?.trim() || (selected.tags ?? []).length > 0) && <hr className="my-5 border-white/15" />}
-                  {selected.otherNotes?.trim() && <p className="whitespace-pre-wrap text-sm leading-6 text-white/70">{selected.otherNotes}</p>}
+                  {selected.otherNotes?.trim() && <p className="whitespace-pre-wrap text-sm leading-6" style={{ color: selected.otherNotesColor || '#ffffff' }}>{selected.otherNotes}</p>}
                   {(selected.tags ?? []).length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {selected.tags.map((tag) => <span key={tag} className="rounded-full border border-white/20 bg-white/5 px-2.5 py-0.5 text-xs text-white/85">{tag}</span>)}
+                      {selected.tags.map((tag) => <span key={tag} className="rounded-full border border-white/20 bg-white/5 px-2.5 py-0.5 text-xs" style={{ color: selected.tagsColor || '#ffffff' }}>{tag}</span>)}
                     </div>
                   )}
                 </div>
@@ -186,7 +196,7 @@ export default function GalleryPage() {
               <button key={entry.id} type="button" onClick={() => setSelectedId(entry.id)}
                 className="group relative block w-full overflow-hidden rounded-md border border-white/10 bg-muted shadow-[0_4px_16px_rgba(0,0,0,0.25)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(0,0,0,0.4)] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
                 <div className="relative aspect-[4/3] w-full overflow-hidden">
-                  <Image src={entry.imageUrl} alt={entry.title} fill unoptimized sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className="object-cover transition duration-500 group-hover:scale-105" />
+                  <Image src={entry.imageUrl} alt={entry.title} fill unoptimized sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className="object-contain" />
                   <div className="absolute inset-x-0 bottom-0 p-2.5">
                     <h3 className="truncate text-left text-sm font-semibold text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.9)]">{entry.title}</h3>
                   </div>
@@ -198,12 +208,14 @@ export default function GalleryPage() {
           <div className="grid min-h-80 place-items-center rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-8 text-center">
             <div>
               <span className="mx-auto mb-4 grid size-12 place-items-center rounded-2xl bg-white/10 text-white/80"><ImagePlus className="size-5" /></span>
-              <h2 className="font-heading text-xl font-semibold">该分类下还没有作品</h2>
+              <h2 className="font-heading text-xl font-semibold">{activeId ? '该分类下还没有作品' : '还没有任何作品'}</h2>
               <p className="mb-5 mt-2 text-sm text-muted-foreground">切换其他分类，或前往上传页面添加作品。</p>
               <Button render={<Link href="/upload" prefetch={false} />}>去上传作品</Button>
             </div>
           </div>
         )}
+          </div>
+        </div>
       </section>
     </main>
   );

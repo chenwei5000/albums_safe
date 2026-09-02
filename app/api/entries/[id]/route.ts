@@ -20,7 +20,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
   const params = await context.params;
   const existing = await getJson<Entry>('entries', params.id);
   if (!existing) return jsonError('数据不存在', 404);
-  const payload = (await request.json().catch(() => null)) as { title?: string; productDesc?: string; productIntro?: string; otherNotes?: string; tags?: string[]; categoryId?: string; imageUrl?: string; imageName?: string } | null;
+  const payload = (await request.json().catch(() => null)) as { title?: string; titleColor?: string; productDesc?: string; productDescColor?: string; productIntro?: string; productIntroColor?: string; otherNotes?: string; otherNotesColor?: string; tags?: string[]; tagsColor?: string; categoryId?: string; imageUrl?: string; imageName?: string } | null;
   const title = payload?.title?.trim();
   if (!title || title.length > 80) return jsonError('主标题须为 1–80 个字符');
   const productDesc = typeof payload?.productDesc === 'string' ? payload.productDesc : '';
@@ -29,6 +29,13 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
   if (!stripTags(productIntro)) return jsonError('产品介绍不能为空');
   const otherNotes = payload?.otherNotes?.trim().slice(0, 500) ?? '';
   const tags = Array.isArray(payload?.tags) ? payload.tags.map((tag) => String(tag).trim()).filter(Boolean).slice(0, 12) : [];
+  // 文案颜色：仅接受 #rrggbb，非法或缺失时回退默认色（标题烫金、其余白色）
+  const textColor = (value: unknown, fallback: string) => (typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.trim()) ? value.trim() : fallback);
+  const titleColor = textColor(payload?.titleColor, '#d4af37');
+  const productDescColor = textColor(payload?.productDescColor, '#ffffff');
+  const productIntroColor = textColor(payload?.productIntroColor, '#ffffff');
+  const otherNotesColor = textColor(payload?.otherNotesColor, '#ffffff');
+  const tagsColor = textColor(payload?.tagsColor, '#ffffff');
   if (!payload?.categoryId) return jsonError('分类不能为空');
   const category = await getJson<Category>('categories', payload.categoryId);
   if (!category) return jsonError('所选分类不存在', 404);
@@ -40,7 +47,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     imageUrl = payload.imageUrl;
     imageName = payload.imageName;
   }
-  const updated: Entry = { ...existing, title, productDesc, productIntro, otherNotes, tags, categoryId: category.id, categoryName: category.name, imageUrl, imageName };
+  const updated: Entry = { ...existing, title, titleColor, productDesc, productDescColor, productIntro, productIntroColor, otherNotes, otherNotesColor, tags, tagsColor, categoryId: category.id, categoryName: category.name, imageUrl, imageName };
   try {
     await putJson('entries', params.id, updated);
   } catch (error) {

@@ -4,7 +4,8 @@
 // 本地脚本/外部服务可用 EDGEOINE_PROJECT_ID + EDGEOINE_BLOB_TOKEN 显式带凭证访问 Blob。
 
 export type Category = { id: string; name: string; color: string; panelColor: string; accentColor: string; createdAt: string };
-export type Entry = { id: string; title: string; subtitle: string; productDesc: string; productIntro: string; otherNotes: string; tags: string[]; categoryId: string; categoryName: string; imageUrl: string; imageName: string; createdAt: string };
+// 五处文案各自携带展示颜色：titleColor/productDescColor/productIntroColor/otherNotesColor/tagsColor
+export type Entry = { id: string; title: string; titleColor: string; subtitle: string; productDesc: string; productDescColor: string; productIntro: string; productIntroColor: string; otherNotes: string; otherNotesColor: string; tags: string[]; tagsColor: string; categoryId: string; categoryName: string; imageUrl: string; imageName: string; createdAt: string };
 
 // body 统一为 Blob：Node 与 Edge 运行时都原生支持，且可直接作为 Response 的 BodyInit。
 export type StoredImage = { body: Blob };

@@ -16,6 +16,27 @@ import type { Category, Entry } from '@/lib/edge-storage';
 type UploadedImage = { url: string; name: string; key: string };
 const colors = ['#4f46e5', '#0891b2', '#059669', '#d97706', '#db2777'];
 
+// 文案颜色预设：大卡片为深色面板，提供适合深底的文字色
+const TEXT_COLOR_PRESETS = ['#ffffff', '#f3d98b', '#d4af37', '#f59e0b', '#ef4444', '#ec4899', '#a855f7', '#3b82f6', '#22d3ee', '#10b981'];
+
+function TextColorPicker({ value, onChange }: { value: string; onChange: (color: string) => void }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="text-xs text-muted-foreground">文字颜色</span>
+      <div className="flex items-center gap-1">
+        {TEXT_COLOR_PRESETS.map((color) => (
+          <button key={color} type="button" title={color} aria-label={`文字颜色 ${color}`} onClick={() => onChange(color)}
+            className={`size-4 rounded-full border transition hover:scale-125 ${value.toLowerCase() === color.toLowerCase() ? 'border-transparent ring-2 ring-primary ring-offset-1 ring-offset-card' : 'border-black/10'}`}
+            style={{ backgroundColor: color }} />
+        ))}
+        <label className="relative size-4 cursor-pointer overflow-hidden rounded-full border border-dashed border-muted-foreground/60" title="自定义颜色" style={{ backgroundColor: value }}>
+          <input type="color" value={value} onChange={(event) => onChange(event.target.value)} className="absolute inset-0 size-full cursor-pointer opacity-0" />
+        </label>
+      </div>
+    </div>
+  );
+}
+
 export function UploadForm({ initialEntry }: { initialEntry?: Entry } = {}) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -26,6 +47,11 @@ export function UploadForm({ initialEntry }: { initialEntry?: Entry } = {}) {
   const [productIntro, setProductIntro] = useState(initialEntry?.productIntro ?? '');
   const [otherNotes, setOtherNotes] = useState(initialEntry?.otherNotes ?? '');
   const [tagsInput, setTagsInput] = useState((initialEntry?.tags ?? []).join(', '));
+  const [titleColor, setTitleColor] = useState(initialEntry?.titleColor || '#d4af37');
+  const [productDescColor, setProductDescColor] = useState(initialEntry?.productDescColor || '#ffffff');
+  const [productIntroColor, setProductIntroColor] = useState(initialEntry?.productIntroColor || '#ffffff');
+  const [otherNotesColor, setOtherNotesColor] = useState(initialEntry?.otherNotesColor || '#ffffff');
+  const [tagsColor, setTagsColor] = useState(initialEntry?.tagsColor || '#ffffff');
   const [categoryName, setCategoryName] = useState(initialEntry?.categoryName ?? '');
   const [categoryId, setCategoryId] = useState(initialEntry?.categoryId ?? '');
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -89,7 +115,7 @@ export function UploadForm({ initialEntry }: { initialEntry?: Entry } = {}) {
           resolvedId = result.id;
         }
       }
-      const payload = { title: title.trim(), productDesc, productIntro, otherNotes: otherNotes.trim(), tags, categoryId: resolvedId, imageUrl: uploaded.url, imageName: uploaded.name };
+      const payload = { title: title.trim(), titleColor, productDesc, productDescColor, productIntro, productIntroColor, otherNotes: otherNotes.trim(), otherNotesColor, tags, tagsColor, categoryId: resolvedId, imageUrl: uploaded.url, imageName: uploaded.name };
       const response = isEdit && initialEntry
         ? await fetch(`/api/entries/${initialEntry.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
         : await fetch('/api/entries', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -119,7 +145,7 @@ export function UploadForm({ initialEntry }: { initialEntry?: Entry } = {}) {
       <section className="h-fit rounded-3xl border bg-card p-5 shadow-sm sm:p-7 lg:sticky lg:top-24">
         <div className="mb-7"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Image details</p><h2 className="mt-2 font-heading text-2xl font-bold tracking-tight">{isEdit ? '编辑影集信息' : '完善影集信息'}</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">{isEdit ? '修改标题、分类或更换图片，确认后保存。' : '填写标题、选择或输入分类，确认图片后即可添加。'}</p></div>
         <div className="space-y-6">
-          <div className="space-y-2"><Label htmlFor="title">主标题 <span className="text-destructive">*</span></Label><Input id="title" className="h-11" maxLength={80} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="为作品起个标题" /><p className="text-right text-xs text-muted-foreground">{title.length}/80</p></div>
+          <div className="space-y-2"><div className="flex flex-wrap items-center justify-between gap-2"><Label htmlFor="title">主标题 <span className="text-destructive">*</span></Label><TextColorPicker value={titleColor} onChange={setTitleColor} /></div><Input id="title" className="h-11" maxLength={80} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="为作品起个标题" /><p className="text-right text-xs text-muted-foreground">{title.length}/80</p></div>
           <div className="space-y-2">
             <Label htmlFor="category">分类 <span className="text-destructive">*</span></Label>
             <div className="relative">
@@ -144,10 +170,10 @@ export function UploadForm({ initialEntry }: { initialEntry?: Entry } = {}) {
             </div>
             <p className="text-xs text-muted-foreground">{willCreateCategory ? <>添加时将自动创建新分类「{categoryName.trim()}」</> : '可直接选择已有分类，或输入名称创建新分类'}</p>
           </div>
-          <div className="space-y-2"><Label>产品说明</Label><RichTextEditor value={productDesc} onChange={setProductDesc} placeholder="简要说明产品（选填，支持排版与插图）" /></div>
-          <div className="space-y-2"><Label>产品介绍 <span className="text-destructive">*</span></Label><RichTextEditor value={productIntro} onChange={setProductIntro} placeholder="详细介绍产品，支持排版与插图（必填）" />{!introFilled && <p className="text-xs text-destructive">产品介绍为必填项</p>}</div>
-          <div className="space-y-2"><Label htmlFor="notes">其他说明</Label><Textarea id="notes" className="min-h-20" maxLength={500} value={otherNotes} onChange={(event) => setOtherNotes(event.target.value)} placeholder="其他需要补充的说明（选填）" /></div>
-          <div className="space-y-2"><Label htmlFor="tags">品牌标签</Label><Input id="tags" className="h-11" value={tagsInput} onChange={(event) => setTagsInput(event.target.value)} placeholder="多个标签用逗号分隔，如：高端, 限量" /></div>
+          <div className="space-y-2"><div className="flex flex-wrap items-center justify-between gap-2"><Label>产品说明</Label><TextColorPicker value={productDescColor} onChange={setProductDescColor} /></div><RichTextEditor value={productDesc} onChange={setProductDesc} placeholder="简要说明产品（选填，支持排版与插图）" /></div>
+          <div className="space-y-2"><div className="flex flex-wrap items-center justify-between gap-2"><Label>产品介绍 <span className="text-destructive">*</span></Label><TextColorPicker value={productIntroColor} onChange={setProductIntroColor} /></div><RichTextEditor value={productIntro} onChange={setProductIntro} placeholder="详细介绍产品，支持排版与插图（必填）" />{!introFilled && <p className="text-xs text-destructive">产品介绍为必填项</p>}</div>
+          <div className="space-y-2"><div className="flex flex-wrap items-center justify-between gap-2"><Label htmlFor="notes">其他说明</Label><TextColorPicker value={otherNotesColor} onChange={setOtherNotesColor} /></div><Textarea id="notes" className="min-h-20" maxLength={500} value={otherNotes} onChange={(event) => setOtherNotes(event.target.value)} placeholder="其他需要补充的说明（选填）" /></div>
+          <div className="space-y-2"><div className="flex flex-wrap items-center justify-between gap-2"><Label htmlFor="tags">品牌标签</Label><TextColorPicker value={tagsColor} onChange={setTagsColor} /></div><Input id="tags" className="h-11" value={tagsInput} onChange={(event) => setTagsInput(event.target.value)} placeholder="多个标签用逗号分隔，如：高端, 限量" /></div>
           {error && <p role="alert" className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p>}
           <Button size="lg" className="h-12 w-full text-base" onClick={() => void submit()} disabled={!title.trim() || !categoryName.trim() || !introFilled || !uploaded || uploading || submitting}>{submitting ? <LoaderCircle className="animate-spin" /> : <ImageUp />}{submitting ? (isEdit ? '正在保存…' : '正在添加…') : isEdit ? '保存修改' : '添加到影集'}</Button>
           <p className="text-center text-xs text-muted-foreground">{isEdit ? '保存成功后自动返回画廊' : '添加成功后将自动返回画廊'}</p>

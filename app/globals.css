@@ -191,3 +191,7 @@ body {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+/* 大卡片富文本按数据颜色展示时，内部标题/加粗/引用统一继承该颜色 */
+.rich-text-colored :where(h2, h3, strong, blockquote) {
+  color: inherit;
+}
