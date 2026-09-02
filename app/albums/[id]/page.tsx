@@ -7,9 +7,9 @@ import { DeleteEntryButton } from '@/components/delete-entry-button';
 import { SiteHeader } from '@/components/site-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { bindings, type Entry } from '@/lib/edge-storage';
+import { getJson, type Entry } from '@/lib/edge-storage';
 
-async function getEntry(id: string) { return bindings.ALBUM_KV.get<Entry>(`entry:${id}`, 'json'); }
+async function getEntry(id: string) { return getJson<Entry>('entries', id); }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;

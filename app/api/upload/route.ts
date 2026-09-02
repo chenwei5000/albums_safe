@@ -1,4 +1,4 @@
-import { bindings, jsonError } from '@/lib/edge-storage';
+import { jsonError, putImage } from '@/lib/edge-storage';
 
 const allowedTypes = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
 
@@ -10,6 +10,6 @@ export async function POST(request: Request) {
   if (file.size > 8 * 1024 * 1024) return jsonError('图片不能超过 8MB');
   const extension = file.name.split('.').pop()?.replace(/[^a-z0-9]/gi, '').toLowerCase() || 'bin';
   const key = `${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}.${extension}`;
-  await bindings.BLOB.put(key, file.stream(), { httpMetadata: { contentType: file.type }, customMetadata: { originalName: file.name } });
+  await putImage(key, file.stream(), file.type);
   return Response.json({ key, name: file.name, url: `/api/images/${encodeURIComponent(key)}` }, { status: 201 });
 }

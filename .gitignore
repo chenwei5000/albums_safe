@@ -36,3 +36,6 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+
+# 本地开发存储（next dev 文件后端落盘目录）
+/.data/
