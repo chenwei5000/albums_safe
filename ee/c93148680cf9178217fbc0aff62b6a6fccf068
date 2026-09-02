@@ -1,0 +1,30 @@
+components/upload-form.tsx
+  h_05021ea194c5a2 13-14,49-50,55,100-117,154,195-213
+app/gallery/page.tsx
+  h_05021ea194c5a2 10,12-13,25,48-63,68,95,101-104,106-107,112,115-116,158-159,172,174,176,214-216,218-221,226-248
+lib/edge-storage.ts
+  h_05021ea194c5a2 7-8,10-32
+app/api/entries/[id]/route.ts
+  h_05021ea194c5a2 1,23,38-39
+package.json
+  h_05021ea194c5a2 19,21
+components/smart-image.tsx
+  h_05021ea194c5a2 1-42
+components/rich-text-editor-inner.tsx
+  h_05021ea194c5a2 6-9,17-19,32,37-38,76-106
+app/api/entries/route.ts
+  h_05021ea194c5a2 1,11,26-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "eec93148680cf9178217fbc0aff62b6a6fccf068",
+  "prompts": {},
+  "humans": {
+    "h_05021ea194c5a2": {
+      "author": "chenwei <chenwei.fazs@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
