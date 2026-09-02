@@ -1,0 +1,26 @@
+components/upload-form.tsx
+  h_05021ea194c5a2 19-39,50-54,118,148,173-176
+app/gallery/page.tsx
+  h_05021ea194c5a2 37-38,43-44,47,74-75,81-89,94-95,100-103,109,130,138,143,149-150,152,155,199,211,217-218
+app/globals.css
+  h_05021ea194c5a2 194-197
+lib/edge-storage.ts
+  h_05021ea194c5a2 7-8
+app/api/entries/route.ts
+  h_05021ea194c5a2 11,20-26,30
+app/api/entries/[id]/route.ts
+  h_05021ea194c5a2 23,32-38,50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "46dc510eea173b47fa06a23e0d75ca4b8a86e66b",
+  "prompts": {},
+  "humans": {
+    "h_05021ea194c5a2": {
+      "author": "chenwei <chenwei.fazs@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
