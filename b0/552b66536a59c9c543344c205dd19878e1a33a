@@ -1,0 +1,20 @@
+app/api/entries/route.ts
+  h_05021ea194c5a2 24,26-29
+lib/edge-storage.ts
+  h_05021ea194c5a2 36-40,45-46,48-49
+app/api/categories/route.ts
+  h_05021ea194c5a2 18,20-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "b0552b66536a59c9c543344c205dd19878e1a33a",
+  "prompts": {},
+  "humans": {
+    "h_05021ea194c5a2": {
+      "author": "chenwei <chenwei.fazs@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
