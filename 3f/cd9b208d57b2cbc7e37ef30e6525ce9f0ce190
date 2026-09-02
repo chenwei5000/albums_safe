@@ -1,0 +1,16 @@
+.npmrc
+  h_05021ea194c5a2 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "3fcd9b208d57b2cbc7e37ef30e6525ce9f0ce190",
+  "prompts": {},
+  "humans": {
+    "h_05021ea194c5a2": {
+      "author": "chenwei <chenwei.fazs@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
