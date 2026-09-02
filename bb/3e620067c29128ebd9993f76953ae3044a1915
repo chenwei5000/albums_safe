@@ -1,0 +1,42 @@
+next.config.ts
+  h_05021ea194c5a2 4-5
+tsconfig.json
+  h_05021ea194c5a2 12
+lib/storage/edgeone-blob.ts
+  h_05021ea194c5a2 1-104
+app/albums/[id]/page.tsx
+  h_05021ea194c5a2 10,12
+lib/storage/local-fs.ts
+  h_05021ea194c5a2 1-93
+postcss.config.mjs
+  h_05021ea194c5a2 1-9
+app/api/entries/[id]/route.ts
+  h_05021ea194c5a2 1,5,12,15
+package.json
+  h_05021ea194c5a2 9-11,16-17
+app/api/entries/route.ts
+  h_05021ea194c5a2 1,3,6,15,18
+app/api/categories/route.ts
+  h_05021ea194c5a2 1,3,6,14,17
+app/api/images/[key]/route.ts
+  h_05021ea194c5a2 1,5-12
+app/api/upload/route.ts
+  h_05021ea194c5a2 1,13
+.gitignore
+  h_05021ea194c5a2 39-41
+lib/edge-storage.ts
+  h_05021ea194c5a2 1-3,8,10-24,26-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "bb3e620067c29128ebd9993f76953ae3044a1915",
+  "prompts": {},
+  "humans": {
+    "h_05021ea194c5a2": {
+      "author": "chenwei <chenwei.fazs@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
