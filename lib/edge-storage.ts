@@ -31,21 +31,22 @@ async function createBackend(): Promise<StorageBackend> {
   const projectId = process.env.EDGEOINE_PROJECT_ID;
   const token = process.env.EDGEOINE_BLOB_TOKEN;
   const { createEdgeOneBlobStorage } = await import('./storage/edgeone-blob');
-  // 显式配置凭证（本地脚本/外部服务）时带凭证访问；
-  // 线上 EdgeOne Functions（production）不传凭证，由运行时按 Store 名称自动鉴权。
   // 显式配置凭证（本地脚本/外部服务/Node 生产部署）时带凭证访问 Blob。
   if (projectId && token) return createEdgeOneBlobStorage({ projectId, token });
-  // 以运行时能力而非 NODE_ENV 判别：Node 运行时（next dev / next start / Node 容器）
-  // 能加载 node:fs，使用文件系统后端（.data 目录）；Edge Runtime（EdgeOne Pages
-  // Functions / miniflare）没有 node:fs，import 会抛错，此时回退 Blob 后端，
-  // 由 Functions 运行时按 Store 名称自动鉴权。
-  try {
-    const { createLocalFileStorage } = await import('./storage/local-fs');
-    return createLocalFileStorage();
-  } catch (error) {
-    console.warn('[storage] 当前运行时不支持文件系统后端，回退到 Blob 存储：', error);
-    return createEdgeOneBlobStorage();
+  // 仅本地开发（`next dev`，NODE_ENV=development 的 Node 运行时）才使用文件系统后端。
+  // 生产环境（EdgeOne Pages Functions，NODE_ENV=production）一律使用 Pages Blob：
+  // 边缘运行时即便能解析 node:fs（打包兼容层），其文件系统也是只读/临时的，写入会抛错，
+  // 导致上传/新增等写接口 500。不能用「能否 import node:fs」判别，这在边缘运行时下不可靠。
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      const { createLocalFileStorage } = await import('./storage/local-fs');
+      return createLocalFileStorage();
+    } catch (error) {
+      console.warn('[storage] 当前运行时不支持文件系统后端，回退到 Blob 存储：', error);
+    }
   }
+  // 线上 EdgeOne Functions 不传凭证，由运行时按 Store 名称自动鉴权。
+  return createEdgeOneBlobStorage();
 }
 
 export async function listJson<T>(collection: string): Promise<T[]> {

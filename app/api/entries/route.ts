@@ -21,6 +21,11 @@ export async function POST(request: Request) {
   const category = await getJson<Category>('categories', payload.categoryId);
   if (!category) return jsonError('所选分类不存在', 404);
   const entry: Entry = { id: crypto.randomUUID(), title, subtitle: '', productDesc, productIntro, otherNotes, tags, categoryId: category.id, categoryName: category.name, imageUrl: payload.imageUrl, imageName: payload.imageName, createdAt: new Date().toISOString() };
-  await putJson('entries', entry.id, entry);
+  try {
+    await putJson('entries', entry.id, entry);
+  } catch (error) {
+    console.error('[api/entries] 写入 Blob 失败：', error);
+    return jsonError('内容保存失败，请稍后重试', 500);
+  }
   return Response.json(entry, { status: 201 });
 }

@@ -15,6 +15,11 @@ export async function POST(request: Request) {
   if (existing.some((category) => category.name.toLowerCase() === name.toLowerCase())) return jsonError('分类名称已存在', 409);
   const hex = (value: string | undefined, fallback: string) => (/^#[0-9a-f]{6}$/i.test(value ?? '') ? value! : fallback);
   const category: Category = { id: crypto.randomUUID(), name, color: hex(payload?.color, '#4f46e5'), panelColor: hex(payload?.panelColor, '#1b1d2e'), accentColor: hex(payload?.accentColor, '#c9a24a'), createdAt: new Date().toISOString() };
-  await putJson('categories', category.id, category);
+  try {
+    await putJson('categories', category.id, category);
+  } catch (error) {
+    console.error('[api/categories] 写入 Blob 失败：', error);
+    return jsonError('分类保存失败，请稍后重试', 500);
+  }
   return Response.json(category, { status: 201 });
 }
