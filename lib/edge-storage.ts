@@ -1,6 +1,7 @@
 // 存储抽象层：本地 `next dev` 使用文件系统后端（.data 目录）；
-// EdgeOne 部署使用 Pages Blob 后端（@edgeone/pages-blob）。
-// 配置环境变量 EDGEOINE_PROJECT_ID + EDGEOINE_BLOB_TOKEN 后自动切换到 Blob。
+// EdgeOne 部署（NODE_ENV=production）使用 Pages Blob 后端（@edgeone/pages-blob），
+// Functions（Edge/Cloud）内仅凭 Store 名称自动鉴权，无需凭证。
+// 本地脚本/外部服务可用 EDGEOINE_PROJECT_ID + EDGEOINE_BLOB_TOKEN 显式带凭证访问 Blob。
 
 export type Category = { id: string; name: string; color: string; createdAt: string };
 export type Entry = { id: string; title: string; categoryId: string; categoryName: string; imageUrl: string; imageName: string; createdAt: string };
@@ -28,10 +29,11 @@ function storage(): Promise<StorageBackend> {
 async function createBackend(): Promise<StorageBackend> {
   const projectId = process.env.EDGEOINE_PROJECT_ID;
   const token = process.env.EDGEOINE_BLOB_TOKEN;
-  if (projectId && token) {
-    const { createEdgeOneBlobStorage } = await import('./storage/edgeone-blob');
-    return createEdgeOneBlobStorage({ projectId, token });
-  }
+  const { createEdgeOneBlobStorage } = await import('./storage/edgeone-blob');
+  // 显式配置凭证（本地脚本/外部服务）时带凭证访问；
+  // 线上 EdgeOne Functions（production）不传凭证，由运行时按 Store 名称自动鉴权。
+  if (projectId && token) return createEdgeOneBlobStorage({ projectId, token });
+  if (process.env.NODE_ENV === 'production') return createEdgeOneBlobStorage();
   const { createLocalFileStorage } = await import('./storage/local-fs');
   return createLocalFileStorage();
 }

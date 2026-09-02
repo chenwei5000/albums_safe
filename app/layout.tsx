@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'Album Safe · Edge 数据管理台',
-  description: '使用 Edge API、KV 与 Blob 构建的轻量图片数据管理台。',
+  description: '使用 Edge API 与 Blob 构建的轻量图片数据管理台。',
 };
 
 export default function RootLayout({
