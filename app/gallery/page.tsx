@@ -3,11 +3,14 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, ImagePlus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ImagePlus, Pencil, Settings, Trash2 } from 'lucide-react';
 import { SiteHeader } from '@/components/site-header';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import type { Category, Entry } from '@/lib/edge-storage';
 
 const hasContent = (html?: string) => !!html && html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim().length > 0;
@@ -19,6 +22,10 @@ export default function GalleryPage() {
   const [activeId, setActiveId] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [preview, setPreview] = useState(false);
+  const router = useRouter();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   const refresh = useCallback(async () => {
     try {
@@ -41,6 +48,27 @@ export default function GalleryPage() {
   const goPrev = () => { if (selectedIndex > 0) setSelectedId(list[selectedIndex - 1].id); };
   const goNext = () => { if (selectedIndex < list.length - 1) setSelectedId(list[selectedIndex + 1].id); };
 
+  const editSelected = () => { if (selected) router.push(`/albums/${selected.id}/edit`); };
+  const removeSelected = async () => {
+    if (!selected) return;
+    setDeleting(true); setDeleteError('');
+    try {
+      const response = await fetch(`/api/entries/${selected.id}`, { method: 'DELETE' });
+      if (response.ok) {
+        setConfirmDelete(false);
+        setSelectedId(null);
+        await refresh();
+        return;
+      }
+      const result = (await response.json().catch(() => null)) as { error?: string } | null;
+      setDeleteError(result?.error ?? '删除失败，请稍后重试');
+    } catch {
+      setDeleteError('网络异常，请稍后重试');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const panel = activeCategory?.panelColor || '#1b1d2e';
   const accent = activeCategory?.accentColor || '#c9a24a';
 
@@ -48,21 +76,16 @@ export default function GalleryPage() {
     <main className="relative min-h-screen bg-transparent text-foreground">
       <SiteHeader />
       <section className="relative z-10 mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
-        {/* 分类 Tab：镂空背景、文字亮、大间距、高亮下划线 */}
+        {/* 分类 Tab：纯白文字、新宋体、不加粗；选中时文字显示当前分类主题色 */}
         <div className="mb-9 -mx-4 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
           <div className="flex w-max items-center gap-x-9 gap-y-3 sm:gap-x-14">
             {categories.map((category) => {
               const active = category.id === activeId;
-              const count = entries.filter((entry) => entry.categoryId === category.id).length;
               return (
                 <button key={category.id} type="button" onClick={() => selectCategory(category.id)}
-                  className={`relative pb-1.5 text-base font-medium tracking-wide transition sm:text-lg ${active ? 'text-white' : 'text-muted-foreground hover:text-foreground'}`}>
-                  <span className="flex items-center gap-2">
-                    <span className="size-2 rounded-full" style={{ backgroundColor: category.color || accent }} />
-                    {category.name}
-                    <span className={`text-xs ${active ? 'text-white/60' : 'text-muted-foreground/60'}`}>{count}</span>
-                  </span>
-                  <span className="absolute -bottom-0.5 left-0 h-[3px] rounded-full transition-all duration-300" style={{ backgroundColor: accent, width: active ? '100%' : '0%' }} />
+                  className="text-base font-normal tracking-wide transition hover:opacity-75 sm:text-lg"
+                  style={{ color: active ? (category.accentColor || accent) : '#ffffff', fontFamily: '"NSimSun","SimSun","新宋体",serif' }}>
+                  {category.name}
                 </button>
               );
             })}
@@ -75,11 +98,23 @@ export default function GalleryPage() {
           </div>
         ) : selected && activeCategory ? (
           /* ————— 原地大卡片 ————— */
-          <article className="overflow-hidden rounded-xl border border-white/10 shadow-2xl" style={{ backgroundColor: panel }}>
+          <article className="relative overflow-hidden rounded-xl border border-white/10 shadow-2xl" style={{ backgroundColor: panel }}>
             <div className="h-1 w-full" style={{ backgroundColor: accent }} />
+            <div className="absolute right-4 top-4 z-20">
+              <DropdownMenu>
+                <DropdownMenuTrigger aria-label="图片设置" className="grid size-9 cursor-pointer place-items-center rounded-full border border-white/25 bg-black/30 text-white/85 backdrop-blur transition hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
+                  <Settings className="size-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" sideOffset={6} className="min-w-36">
+                  <DropdownMenuItem onClick={editSelected}><Pencil />编辑图片</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onClick={() => setConfirmDelete(true)}><Trash2 />删除图片</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
             <div className="p-5 sm:p-8">
               {/* 面包屑 */}
-              <nav className="mb-6 flex flex-wrap items-center gap-2 text-xs text-white/55">
+              <nav className="mb-6 flex flex-wrap items-center gap-2 pr-12 text-xs text-white/55">
                 <button type="button" onClick={() => setSelectedId(null)} className="transition hover:text-white">画廊</button>
                 <span>/</span>
                 <button type="button" onClick={() => setSelectedId(null)} className="transition hover:text-white">{activeCategory.name}</button>
@@ -95,7 +130,12 @@ export default function GalleryPage() {
 
                 {/* 右侧信息 */}
                 <div className="text-white">
-                  <h2 className="text-gold font-heading text-2xl font-bold leading-tight tracking-tight sm:text-3xl">{selected.title}</h2>
+                  <h2 className="text-gold text-2xl font-normal leading-tight sm:text-3xl" style={{ fontFamily: '"NSimSun","SimSun","新宋体",serif' }}>{selected.title}</h2>
+                  <div className="mt-3 flex items-center gap-2" aria-hidden>
+                    <span className="h-0.5 w-10 rounded-full" style={{ backgroundColor: accent }} />
+                    <span className="size-1.5 rotate-45" style={{ backgroundColor: accent }} />
+                    <span className="h-px flex-1" style={{ background: `linear-gradient(to right, ${accent}66, transparent)` }} />
+                  </div>
                   {hasContent(selected.productDesc) && <div className="rich-text mt-4 text-[0.95rem] leading-7 text-white/85" dangerouslySetInnerHTML={{ __html: selected.productDesc }} />}
                   {hasContent(selected.productIntro) && <div className="rich-text mt-3 text-[0.95rem] leading-7 text-white/80" dangerouslySetInnerHTML={{ __html: selected.productIntro }} />}
                   {(selected.otherNotes?.trim() || (selected.tags ?? []).length > 0) && <hr className="my-5 border-white/15" />}
@@ -124,6 +164,20 @@ export default function GalleryPage() {
                 <div className="relative h-full w-full"><Image src={selected.imageUrl} alt={selected.title} fill unoptimized sizes="96vw" className="object-contain" /></div>
               </DialogContent>
             </Dialog>
+
+            <AlertDialog open={confirmDelete} onOpenChange={(open) => { setConfirmDelete(open); if (!open) setDeleteError(''); }}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>确认删除“{selected.title}”？</AlertDialogTitle>
+                  <AlertDialogDescription>这会永久删除该条数据及其图片文件，操作无法撤销。</AlertDialogDescription>
+                </AlertDialogHeader>
+                {deleteError && <p role="alert" className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{deleteError}</p>}
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={deleting}>取消</AlertDialogCancel>
+                  <AlertDialogAction variant="destructive" disabled={deleting} onClick={() => void removeSelected()}>{deleting ? '正在删除…' : '确认删除'}</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </article>
         ) : list.length ? (
           /* ————— 缩略图网格 ————— */

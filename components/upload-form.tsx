@@ -11,24 +11,27 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RichTextEditor } from '@/components/rich-text-editor';
-import type { Category } from '@/lib/edge-storage';
+import type { Category, Entry } from '@/lib/edge-storage';
 
 type UploadedImage = { url: string; name: string; key: string };
 const colors = ['#4f46e5', '#0891b2', '#059669', '#d97706', '#db2777'];
 
-export function UploadForm() {
+export function UploadForm({ initialEntry }: { initialEntry?: Entry } = {}) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const isEdit = Boolean(initialEntry);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [title, setTitle] = useState('');
-  const [productDesc, setProductDesc] = useState('');
-  const [productIntro, setProductIntro] = useState('');
-  const [otherNotes, setOtherNotes] = useState('');
-  const [tagsInput, setTagsInput] = useState('');
-  const [categoryName, setCategoryName] = useState('');
-  const [categoryId, setCategoryId] = useState('');
+  const [title, setTitle] = useState(initialEntry?.title ?? '');
+  const [productDesc, setProductDesc] = useState(initialEntry?.productDesc ?? '');
+  const [productIntro, setProductIntro] = useState(initialEntry?.productIntro ?? '');
+  const [otherNotes, setOtherNotes] = useState(initialEntry?.otherNotes ?? '');
+  const [tagsInput, setTagsInput] = useState((initialEntry?.tags ?? []).join(', '));
+  const [categoryName, setCategoryName] = useState(initialEntry?.categoryName ?? '');
+  const [categoryId, setCategoryId] = useState(initialEntry?.categoryId ?? '');
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [uploaded, setUploaded] = useState<UploadedImage | null>(null);
+  const [uploaded, setUploaded] = useState<UploadedImage | null>(
+    initialEntry ? { url: initialEntry.imageUrl, name: initialEntry.imageName, key: '' } : null,
+  );
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -86,10 +89,13 @@ export function UploadForm() {
           resolvedId = result.id;
         }
       }
-      const response = await fetch('/api/entries', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title.trim(), productDesc, productIntro, otherNotes: otherNotes.trim(), tags, categoryId: resolvedId, imageUrl: uploaded.url, imageName: uploaded.name }) });
+      const payload = { title: title.trim(), productDesc, productIntro, otherNotes: otherNotes.trim(), tags, categoryId: resolvedId, imageUrl: uploaded.url, imageName: uploaded.name };
+      const response = isEdit && initialEntry
+        ? await fetch(`/api/entries/${initialEntry.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        : await fetch('/api/entries', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const result = (await response.json()) as { error?: string };
       if (response.ok) { router.push('/gallery'); router.refresh(); return; }
-      setError(result.error ?? '数据添加失败');
+      setError(result.error ?? (isEdit ? '保存失败' : '数据添加失败'));
     } catch {
       setError('网络异常，请稍后重试');
     }
@@ -101,7 +107,7 @@ export function UploadForm() {
       <section>
         <Label htmlFor="image-file" className="mb-3 block text-sm font-semibold">图片 <span className="text-destructive">*</span></Label>
         {uploaded ? (
-          <div className="relative min-h-[420px] overflow-hidden rounded-3xl border bg-muted shadow-sm sm:min-h-[560px]"><Image src={uploaded.url} alt="已上传图片预览" fill unoptimized sizes="(max-width: 1024px) 100vw, 55vw" className="object-contain" /><div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 bg-gradient-to-t from-black/70 to-transparent p-5 pt-16 text-white"><div className="min-w-0"><p className="flex items-center gap-2 text-sm font-medium"><Check className="size-4 text-emerald-300" />上传完成</p><p className="mt-1 truncate text-xs text-white/70">{uploaded.name}</p></div><Button variant="outline" size="sm" className="border-white/20 bg-black/20 text-white hover:bg-black/40" onClick={() => { setUploaded(null); if (inputRef.current) inputRef.current.value = ''; }}><X />重新选择</Button></div></div>
+          <div className="relative min-h-[420px] overflow-hidden rounded-3xl border bg-muted shadow-sm sm:min-h-[560px]"><Image src={uploaded.url} alt="已上传图片预览" fill unoptimized sizes="(max-width: 1024px) 100vw, 55vw" className="object-contain" /><div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 bg-gradient-to-t from-black/70 to-transparent p-5 pt-16 text-white"><div className="min-w-0"><p className="flex items-center gap-2 text-sm font-medium"><Check className="size-4 text-emerald-300" />{isEdit ? '当前图片' : '上传完成'}</p><p className="mt-1 truncate text-xs text-white/70">{uploaded.name}</p></div><Button variant="outline" size="sm" className="border-white/20 bg-black/20 text-white hover:bg-black/40" onClick={() => { setUploaded(null); if (inputRef.current) inputRef.current.value = ''; }}><X />{isEdit ? '更换图片' : '重新选择'}</Button></div></div>
         ) : (
           <label htmlFor="image-file" className="group flex min-h-[420px] cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-primary/30 bg-card p-8 text-center shadow-sm transition hover:border-primary/60 hover:bg-primary/[0.025] sm:min-h-[560px]">
             <span className="mb-5 grid size-16 place-items-center rounded-2xl bg-secondary text-secondary-foreground transition group-hover:scale-105"><UploadCloud className="size-7" /></span><h2 className="font-heading text-xl font-semibold">{uploading ? '图片上传中…' : '点击选择图片'}</h2><p className="mt-2 text-sm text-muted-foreground">选择后将自动上传到 Blob</p><Badge variant="outline" className="mt-5">PNG、JPG、WebP、GIF · 最大 8MB</Badge>{uploading && <LoaderCircle className="mt-5 size-5 animate-spin text-primary" />}
@@ -111,7 +117,7 @@ export function UploadForm() {
       </section>
 
       <section className="h-fit rounded-3xl border bg-card p-5 shadow-sm sm:p-7 lg:sticky lg:top-24">
-        <div className="mb-7"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Image details</p><h2 className="mt-2 font-heading text-2xl font-bold tracking-tight">完善影集信息</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">填写标题、选择或输入分类，确认图片后即可添加。</p></div>
+        <div className="mb-7"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Image details</p><h2 className="mt-2 font-heading text-2xl font-bold tracking-tight">{isEdit ? '编辑影集信息' : '完善影集信息'}</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">{isEdit ? '修改标题、分类或更换图片，确认后保存。' : '填写标题、选择或输入分类，确认图片后即可添加。'}</p></div>
         <div className="space-y-6">
           <div className="space-y-2"><Label htmlFor="title">主标题 <span className="text-destructive">*</span></Label><Input id="title" className="h-11" maxLength={80} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="为作品起个标题" /><p className="text-right text-xs text-muted-foreground">{title.length}/80</p></div>
           <div className="space-y-2">
@@ -143,8 +149,8 @@ export function UploadForm() {
           <div className="space-y-2"><Label htmlFor="notes">其他说明</Label><Textarea id="notes" className="min-h-20" maxLength={500} value={otherNotes} onChange={(event) => setOtherNotes(event.target.value)} placeholder="其他需要补充的说明（选填）" /></div>
           <div className="space-y-2"><Label htmlFor="tags">品牌标签</Label><Input id="tags" className="h-11" value={tagsInput} onChange={(event) => setTagsInput(event.target.value)} placeholder="多个标签用逗号分隔，如：高端, 限量" /></div>
           {error && <p role="alert" className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p>}
-          <Button size="lg" className="h-12 w-full text-base" onClick={() => void submit()} disabled={!title.trim() || !categoryName.trim() || !introFilled || !uploaded || uploading || submitting}>{submitting ? <LoaderCircle className="animate-spin" /> : <ImageUp />}{submitting ? '正在添加…' : '添加到影集'}</Button>
-          <p className="text-center text-xs text-muted-foreground">添加成功后将自动返回画廊</p>
+          <Button size="lg" className="h-12 w-full text-base" onClick={() => void submit()} disabled={!title.trim() || !categoryName.trim() || !introFilled || !uploaded || uploading || submitting}>{submitting ? <LoaderCircle className="animate-spin" /> : <ImageUp />}{submitting ? (isEdit ? '正在保存…' : '正在添加…') : isEdit ? '保存修改' : '添加到影集'}</Button>
+          <p className="text-center text-xs text-muted-foreground">{isEdit ? '保存成功后自动返回画廊' : '添加成功后将自动返回画廊'}</p>
         </div>
       </section>
     </div>
